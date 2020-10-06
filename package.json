@@ -1,0 +1,25 @@
+{
+  "name": "computation-tree-logic",
+  "version": "1.0.0",
+  "description": "Computation treel logic library for JS",
+  "main": "index.js",
+  "type": "module",
+  "directories": {
+    "example": "examples",
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TiesWestendorp/BDD.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/TiesWestendorp/BDD/issues"
+  },
+  "homepage": "https://github.com/TiesWestendorp/BDD#readme",
+  "dependencies": {}
+}

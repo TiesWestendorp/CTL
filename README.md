@@ -1,2 +1,5 @@
-# BDD
-BDD library for JS
+# CTL
+CTL library for JS
+
+#
+browserify main.js --outfile=bundle.js
