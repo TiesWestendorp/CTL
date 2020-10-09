@@ -2,8 +2,6 @@
 
 const bdd = require('./bdd.js')
 
-//  - Witness and counterexample generation (Tree-like counterexample in model checking by Clarke et al)
-//  - FORCE variable ordering
 class CTL {
   static reset() {
     bdd.reset()
@@ -38,6 +36,7 @@ class CTL {
   static EG(p,    trans) { return CTL.gfp(u => bdd.and(p, CTL.EX(u, trans))) }
   static EF(p,    trans) { return CTL.lfp(u => bdd.or(p,  CTL.EX(u, trans))) }
   static EU(p, q, trans) { return CTL.lfp(u => bdd.or(p, bdd.and(q, CTL.EX(u, trans)))) }
+
   static AX(p,    trans) { return bdd.not(CTL.EX(bdd.not(p), trans)) }
   static AP(p,    trans) { return bdd.not(CTL.EP(bdd.not(p), trans)) }
   static AG(p,    trans) { return CTL.gfp(u => bdd.and(p, CTL.AX(u, trans))) }
@@ -45,8 +44,9 @@ class CTL {
   static AU(p, q, trans) { return CTL.lfp(u => bdd.or(p, bdd.and(q, CTL.AX(u, trans)))) }
 
   static reachable(p, trans) { return CTL.lfp(u => bdd.or(p, CTL.EP(u, trans))) }
-  static source(trans)       { return CTL.AP(bdd.False, trans) }
-  static deadlock(trans)     { return CTL.AX(bdd.False, trans) }
+
+  static source(trans)   { return CTL.AP(bdd.False, trans) } // find all states without transitions to them
+  static deadlock(trans) { return CTL.AX(bdd.False, trans) } // find all states without transitions from them
 }
 CTL.reset()
 

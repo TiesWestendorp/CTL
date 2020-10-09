@@ -2,7 +2,6 @@
 "use strict"
 
 // All compositional statements ensure that the resulting BDD is an ROBDD (reduced and ordered).
-// Global pre- and post-condition: variable ordering is increasing
 
 // Note: Complexity improvement possible for existsN and forallN, if using binary search. Though there should be no difference in practice.
 
@@ -16,6 +15,11 @@ class BDD {
   get isTerminal()    { return false }
   get isSatisfiable() { return this !== BDD.False }
   get isTautology()   { return this === BDD.True  }
+
+  numberOfSatisfyingAssignments(number_of_variables) {
+    if (this.isTerminal) return this.value * Math.pow(2, number_of_variables)
+    return (this._then.numberOfSatisfyingAssignments(number_of_variables) + this._else.numberOfSatisfyingAssignments(number_of_variables))/2
+  }
 
   static reset() {
     BDD.cache = {}
@@ -48,7 +52,6 @@ class BDD {
     if (A === BDD.False) return BDD.True
     return new BDD(A._label, BDD.noCacheNot(A._then), BDD.noCacheNot(A._else))
   }
-
 
   /*
    *
@@ -89,14 +92,13 @@ class BDD {
 
 
   /*
-   * Boolean operations
+   * Unary + binary boolean operations
    */
   static not(A) {
     if (A === BDD.True)  return BDD.False
     if (A === BDD.False) return BDD.True
     return BDD.get(A._label, BDD.not(A._then), BDD.not(A._else))
   }
-
   static and(A, B) {
     if (A === BDD.True)   return B
     if (B === BDD.True)   return A
@@ -113,7 +115,6 @@ class BDD {
       return BDD.get(B._label, BDD.and(A, B._then), BDD.and(A, B._else))
     }
   }
-
   static or(A, B) {
     if (A === BDD.True)   return BDD.True
     if (B === BDD.True)   return BDD.True
@@ -130,7 +131,6 @@ class BDD {
       return BDD.get(B._label, BDD.or(A, B._then), BDD.or(A, B._else))
     }
   }
-
   static eql(A, B) {
     if (A === BDD.True)   return B
     if (B === BDD.True)   return A
@@ -147,11 +147,13 @@ class BDD {
       return BDD.get(B._label, BDD.eql(A, B._then), BDD.eql(A, B._else))
     }
   }
-
   static xor(A, B)  { return BDD.not(BDD.eql(A, B)) }
   static nor(A, B)  { return BDD.not(BDD.or(A, B))  }
   static nand(A, B) { return BDD.not(BDD.and(A, B)) }
 
+  /*
+   * n-nary boolean operations
+   */
   static andN(As) {
     if (As.length === 0) return BDD.True
     if (As.length === 1) return As[0]
@@ -160,7 +162,6 @@ class BDD {
 
     return BDD.and(As[0], BDD.andN(As.slice(1)))
   }
-
   static orN(As) {
     if (As.length === 0) return BDD.True
     if (As.length === 1) return As[0]
@@ -173,30 +174,8 @@ class BDD {
 
   /*
    * Quantifiers
+   * Precondition: labels sorted
    */
-  static exists(A, label) {
-    if (A.isTerminal)  return A
-    if (A._label === label) {
-      return BDD.or(A._then, A._else)
-    } else if (A._label < label) {
-      return BDD.get(A._label, BDD.exists(A._then, label), BDD.exists(A._else, label))
-    } else {
-      return A
-    }
-  }
-
-  static forall(A, label) {
-    if (A.isTerminal)  return A
-    if (A._label === label) {
-      return BDD.and(A._then, A._else)
-    } else if (A._label < label) {
-      return BDD.get(A._label, BDD.forall(A._then, label), BDD.forall(A._else, label))
-    } else {
-      return A
-    }
-  }
-
-  // Precondition: labels sorted
   static existsN(A, labels) {
     if (A.isTerminal) return A
     const index = labels.findIndex(label => label >= A._label)
@@ -210,8 +189,6 @@ class BDD {
       return BDD.get(A._label, BDD.existsN(A._then, labels), BDD.existsN(A._else, labels))
     }
   }
-
-  // Precondition: labels sorted
   static forallN(A, labels) {
     if (A.isTerminal) return A
     const index = labels.findIndex(label => label >= A._label)
@@ -238,8 +215,6 @@ module.exports = BDD
 
 const bdd = require('./bdd.js')
 
-//  - Witness and counterexample generation (Tree-like counterexample in model checking by Clarke et al)
-//  - FORCE variable ordering
 class CTL {
   static reset() {
     bdd.reset()
@@ -274,6 +249,7 @@ class CTL {
   static EG(p,    trans) { return CTL.gfp(u => bdd.and(p, CTL.EX(u, trans))) }
   static EF(p,    trans) { return CTL.lfp(u => bdd.or(p,  CTL.EX(u, trans))) }
   static EU(p, q, trans) { return CTL.lfp(u => bdd.or(p, bdd.and(q, CTL.EX(u, trans)))) }
+
   static AX(p,    trans) { return bdd.not(CTL.EX(bdd.not(p), trans)) }
   static AP(p,    trans) { return bdd.not(CTL.EP(bdd.not(p), trans)) }
   static AG(p,    trans) { return CTL.gfp(u => bdd.and(p, CTL.AX(u, trans))) }
@@ -281,8 +257,9 @@ class CTL {
   static AU(p, q, trans) { return CTL.lfp(u => bdd.or(p, bdd.and(q, CTL.AX(u, trans)))) }
 
   static reachable(p, trans) { return CTL.lfp(u => bdd.or(p, CTL.EP(u, trans))) }
-  static source(trans)       { return CTL.AP(bdd.False, trans) }
-  static deadlock(trans)     { return CTL.AX(bdd.False, trans) }
+
+  static source(trans)   { return CTL.AP(bdd.False, trans) } // find all states without transitions to them
+  static deadlock(trans) { return CTL.AX(bdd.False, trans) } // find all states without transitions from them
 }
 CTL.reset()
 
@@ -304,13 +281,13 @@ class FairCTL {
     if (fairness.size == 0) return ctl.EX(p, trans)
     return bdd.andN(fairness.map(cond => ctl.EX(ctl.EU(p, bdd.and(p, cond), trans), trans)))
   }
-  static EG(p, fairness, trans) { return ctl.gfp(u => bdd.and(p, FairCTL.EX(u, trans))) }
-  static EF(p, fairness, trans) { return ctl.lfp(u => bdd.or(p,  FairCTL.EX(u, trans))) }
-  static EU(p, q, trans) { return ctl.lfp(u => bdd.or(p, bdd.and(q, FairCTL.EX(u, trans)))) }
-  static AX(p,    trans) { return bdd.not(FairCTL.EX(bdd.not(p), trans)) }
-  static AG(p,    trans) { return ctl.gfp(u => bdd.and(p, FairCTL.AX(u, trans))) }
-  static AF(p,    trans) { return ctl.lfp(u => bdd.or(p,  FairCTL.AX(u, trans))) }
-  static AU(p, q, trans) { return ctl.lfp(u => bdd.or(p, bdd.and(q, FairCTL.AX(u, trans)))) }
+  static EG(p, fairness, trans) { return ctl.gfp(u => bdd.and(p, FairCTL.EX(u, fairness, trans))) }
+  static EF(p, fairness, trans) { return ctl.lfp(u => bdd.or(p,  FairCTL.EX(u, fairness, trans))) }
+  static EU(p, q, trans) { return ctl.lfp(u => bdd.or(p, bdd.and(q, FairCTL.EX(u, fairness, trans)))) }
+  static AX(p,    trans) { return bdd.not(FairCTL.EX(bdd.not(p), fairness, trans)) }
+  static AG(p,    trans) { return ctl.gfp(u => bdd.and(p, FairCTL.AX(u, fairness, trans))) }
+  static AF(p,    trans) { return ctl.lfp(u => bdd.or(p,  FairCTL.AX(u, fairness, trans))) }
+  static AU(p, q, trans) { return ctl.lfp(u => bdd.or(p, bdd.and(q, FairCTL.AX(u, fairness, trans)))) }
 }
 FairCTL.reset()
 
@@ -328,9 +305,10 @@ const [b, _b] = window.ctl.variable()
 
 const initial    = bdd.and(a,b)
 const transition = bdd.orN([
-  bdd.andN([a, _a,          b,          bdd.not(_b)]),
-  bdd.andN([a, bdd.not(_a), b,          _b]),
-  bdd.andN([bdd.not(a), _a, bdd.not(b), bdd.not(_b)]),
+  bdd.andN([a,          b,          _a,          bdd.not(_b)]),
+  bdd.andN([a,          bdd.not(b), bdd.not(_a), bdd.not(_b)]),
+  bdd.andN([bdd.not(a), bdd.not(b), _a,          _b]),
+  bdd.andN([bdd.not(a), b,          _a,  _b]),
 ])
 
 //console.warn("EF(b) =")
@@ -339,7 +317,8 @@ const transition = bdd.orN([
 //console.warn("EG(b) =")
 //console.warn(bdd.and(initial, window.ctl.EG(b, transition)))
 
-console.warn(window.ctl.source(transition))
+console.warn(window.ctl.source(transition).numberOfSatisfyingAssignments(window.ctl.state.size))
+console.warn(window.ctl.deadlock(transition).numberOfSatisfyingAssignments(window.ctl.state.size))
 //console.warn(transition)
 //console.warn("AG(b) = ")
 //console.warn(window.ctl.AG(b, transition))

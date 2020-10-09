@@ -1,7 +1,6 @@
 "use strict"
 
 // All compositional statements ensure that the resulting BDD is an ROBDD (reduced and ordered).
-// Global pre- and post-condition: variable ordering is increasing
 
 // Note: Complexity improvement possible for existsN and forallN, if using binary search. Though there should be no difference in practice.
 
@@ -15,6 +14,11 @@ class BDD {
   get isTerminal()    { return false }
   get isSatisfiable() { return this !== BDD.False }
   get isTautology()   { return this === BDD.True  }
+
+  numberOfSatisfyingAssignments(number_of_variables) {
+    if (this.isTerminal) return this.value * Math.pow(2, number_of_variables)
+    return (this._then.numberOfSatisfyingAssignments(number_of_variables) + this._else.numberOfSatisfyingAssignments(number_of_variables))/2
+  }
 
   static reset() {
     BDD.cache = {}
@@ -47,7 +51,6 @@ class BDD {
     if (A === BDD.False) return BDD.True
     return new BDD(A._label, BDD.noCacheNot(A._then), BDD.noCacheNot(A._else))
   }
-
 
   /*
    *
@@ -88,14 +91,13 @@ class BDD {
 
 
   /*
-   * Boolean operations
+   * Unary + binary boolean operations
    */
   static not(A) {
     if (A === BDD.True)  return BDD.False
     if (A === BDD.False) return BDD.True
     return BDD.get(A._label, BDD.not(A._then), BDD.not(A._else))
   }
-
   static and(A, B) {
     if (A === BDD.True)   return B
     if (B === BDD.True)   return A
@@ -112,7 +114,6 @@ class BDD {
       return BDD.get(B._label, BDD.and(A, B._then), BDD.and(A, B._else))
     }
   }
-
   static or(A, B) {
     if (A === BDD.True)   return BDD.True
     if (B === BDD.True)   return BDD.True
@@ -129,7 +130,6 @@ class BDD {
       return BDD.get(B._label, BDD.or(A, B._then), BDD.or(A, B._else))
     }
   }
-
   static eql(A, B) {
     if (A === BDD.True)   return B
     if (B === BDD.True)   return A
@@ -146,11 +146,13 @@ class BDD {
       return BDD.get(B._label, BDD.eql(A, B._then), BDD.eql(A, B._else))
     }
   }
-
   static xor(A, B)  { return BDD.not(BDD.eql(A, B)) }
   static nor(A, B)  { return BDD.not(BDD.or(A, B))  }
   static nand(A, B) { return BDD.not(BDD.and(A, B)) }
 
+  /*
+   * n-nary boolean operations
+   */
   static andN(As) {
     if (As.length === 0) return BDD.True
     if (As.length === 1) return As[0]
@@ -159,7 +161,6 @@ class BDD {
 
     return BDD.and(As[0], BDD.andN(As.slice(1)))
   }
-
   static orN(As) {
     if (As.length === 0) return BDD.True
     if (As.length === 1) return As[0]
@@ -172,30 +173,8 @@ class BDD {
 
   /*
    * Quantifiers
+   * Precondition: labels sorted
    */
-  static exists(A, label) {
-    if (A.isTerminal)  return A
-    if (A._label === label) {
-      return BDD.or(A._then, A._else)
-    } else if (A._label < label) {
-      return BDD.get(A._label, BDD.exists(A._then, label), BDD.exists(A._else, label))
-    } else {
-      return A
-    }
-  }
-
-  static forall(A, label) {
-    if (A.isTerminal)  return A
-    if (A._label === label) {
-      return BDD.and(A._then, A._else)
-    } else if (A._label < label) {
-      return BDD.get(A._label, BDD.forall(A._then, label), BDD.forall(A._else, label))
-    } else {
-      return A
-    }
-  }
-
-  // Precondition: labels sorted
   static existsN(A, labels) {
     if (A.isTerminal) return A
     const index = labels.findIndex(label => label >= A._label)
@@ -209,8 +188,6 @@ class BDD {
       return BDD.get(A._label, BDD.existsN(A._then, labels), BDD.existsN(A._else, labels))
     }
   }
-
-  // Precondition: labels sorted
   static forallN(A, labels) {
     if (A.isTerminal) return A
     const index = labels.findIndex(label => label >= A._label)

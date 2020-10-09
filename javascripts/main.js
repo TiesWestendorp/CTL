@@ -9,9 +9,10 @@ const [b, _b] = window.ctl.variable()
 
 const initial    = bdd.and(a,b)
 const transition = bdd.orN([
-  bdd.andN([a, _a,          b,          bdd.not(_b)]),
-  bdd.andN([a, bdd.not(_a), b,          _b]),
-  bdd.andN([bdd.not(a), _a, bdd.not(b), bdd.not(_b)]),
+  bdd.andN([a,          b,          _a,          bdd.not(_b)]),
+  bdd.andN([a,          bdd.not(b), bdd.not(_a), bdd.not(_b)]),
+  bdd.andN([bdd.not(a), bdd.not(b), _a,          _b]),
+  bdd.andN([bdd.not(a), b,          _a,  _b]),
 ])
 
 //console.warn("EF(b) =")
@@ -20,7 +21,8 @@ const transition = bdd.orN([
 //console.warn("EG(b) =")
 //console.warn(bdd.and(initial, window.ctl.EG(b, transition)))
 
-console.warn(window.ctl.source(transition))
+console.warn(window.ctl.source(transition).numberOfSatisfyingAssignments(window.ctl.state.length))
+console.warn(window.ctl.deadlock(transition).numberOfSatisfyingAssignments(window.ctl.state.length))
 //console.warn(transition)
 //console.warn("AG(b) = ")
 //console.warn(window.ctl.AG(b, transition))

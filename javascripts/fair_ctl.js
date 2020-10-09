@@ -10,7 +10,7 @@ class FairCTL {
   }
 
   static EX(p, fairness, trans) {
-    if (fairness.size == 0) return ctl.EX(p, trans)
+    if (fairness.length == 0) return ctl.EX(p, trans)
     return bdd.andN(fairness.map(cond => ctl.EX(ctl.EU(p, bdd.and(p, cond), trans), trans)))
   }
   static EG(p, fairness, trans) { return ctl.gfp(u => bdd.and(p, FairCTL.EX(u, fairness, trans))) }
