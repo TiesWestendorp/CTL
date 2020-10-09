@@ -2,8 +2,6 @@
 
 // All compositional statements ensure that the resulting BDD is an ROBDD (reduced and ordered).
 
-// Note: Complexity improvement possible for existsN and forallN, if using binary search. Though there should be no difference in practice.
-
 class BDD {
   constructor(_label, _then, _else) {
     this._label = _label
@@ -14,19 +12,21 @@ class BDD {
   get isTerminal()    { return false }
   get isSatisfiable() { return this !== BDD.False }
   get isTautology()   { return this === BDD.True  }
-
   numberOfSatisfyingAssignments(number_of_variables) {
     if (this.isTerminal) return this.value * Math.pow(2, number_of_variables)
     return (this._then.numberOfSatisfyingAssignments(number_of_variables) + this._else.numberOfSatisfyingAssignments(number_of_variables))/2
   }
 
-  static reset() {
+  static cacheReset() {
     BDD.cache = {}
+  }
+  static reset() {
+    BDD.cacheReset()
     BDD.vars  = 0
   }
-
-  static variable() { return BDD.get(BDD.vars++, BDD.True, BDD.False) }
-
+  static variable() {
+    return BDD.get(BDD.vars++, BDD.True, BDD.False)
+  }
   static get(_label, _then, _else) {
     if (_then === _else) {
       return _then
@@ -45,7 +45,6 @@ class BDD {
     }
     return bdd
   }
-
   static noCacheNot(A) {
     if (A === BDD.True)  return BDD.False
     if (A === BDD.False) return BDD.True
@@ -53,7 +52,7 @@ class BDD {
   }
 
   /*
-   *
+   * Replace True by _then and False by _else recursively in A
    */
   static conditional(A, _then, _else) {
     if (A === BDD.True)       return _then
@@ -66,7 +65,6 @@ class BDD {
     if (_then.isTerminal && _else.isTerminal) {
       return _then.value ? A : BDD.not(A)
     }
-
     const rootLabel = Math.min(A._label, _then._label, _else._label)
     switch( 4 * (A._label === rootLabel) + 2 * (_then._label === rootLabel) + (_else._label === rootlabel) ) {
       case 1: return BDD.get(rootLabel, BDD.conditional(A, _then, _else._then),             BDD.conditional(A, _then, _else._else))
@@ -105,7 +103,6 @@ class BDD {
     if (B === BDD.False)  return BDD.False
     if (A === B)          return A
     if (A === BDD.not(B)) return BDD.False
-
     if (A._label === B._label) {
       return BDD.get(A._label, BDD.and(A._then, B._then), BDD.and(A._else, B._else))
     } else if (A._label < B._label) {
@@ -121,7 +118,6 @@ class BDD {
     if (B === BDD.False)  return A
     if (A === B)          return A
     if (A === BDD.not(B)) return BDD.True
-
     if (A._label === B._label) {
       return BDD.get(A._label, BDD.or(A._then, B._then), BDD.or(A._else, B._else))
     } else if (A._label < B._label) {
@@ -137,7 +133,6 @@ class BDD {
     if (B === BDD.False)  return BDD.not(A)
     if (A === B)          return BDD.True
     if (A === BDD.not(B)) return BDD.False
-
     if (A._label === B._label) {
       return BDD.get(A._label, BDD.eql(A._then, B._then), BDD.eql(A._else, B._else))
     } else if (A._label < B._label) {
@@ -150,6 +145,7 @@ class BDD {
   static nor(A, B)  { return BDD.not(BDD.or(A, B))  }
   static nand(A, B) { return BDD.not(BDD.and(A, B)) }
 
+
   /*
    * n-nary boolean operations
    */
@@ -158,7 +154,6 @@ class BDD {
     if (As.length === 1) return As[0]
     if (As[0] === BDD.True)  return BDD.andN(As.slice(1))
     if (As[0] === BDD.False) return BDD.False
-
     return BDD.and(As[0], BDD.andN(As.slice(1)))
   }
   static orN(As) {
@@ -166,20 +161,21 @@ class BDD {
     if (As.length === 1) return As[0]
     if (As[0] === BDD.True)  return BDD.True
     if (As[0] === BDD.False) return BDD.orN(As.slice(1))
-
     return BDD.or(As[0], BDD.orN(As.slice(1)))
   }
 
 
   /*
    * Quantifiers
+   * Note: Complexity improvement possible for these methods by using binary
+   *       rather than linear search, though this should make no difference
+   *       in practice.
    * Precondition: labels sorted
    */
   static existsN(A, labels) {
     if (A.isTerminal) return A
     const index = labels.findIndex(label => label >= A._label)
     if (index === -1) return A
-
     if (A._label === labels[index]) {
       labels = labels.slice(index + 1)
       return BDD.or(BDD.existsN(A._then, labels), BDD.existsN(A._else, labels))
@@ -192,7 +188,6 @@ class BDD {
     if (A.isTerminal) return A
     const index = labels.findIndex(label => label >= A._label)
     if (index === -1) return A
-
     if (A._label === labels[index]) {
       labels = labels.slice(index + 1)
       return BDD.and(BDD.forallN(A._then, labels), BDD.forallN(A._else, labels))

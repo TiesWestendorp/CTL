@@ -43,10 +43,9 @@ class CTL {
   static AF(p,    trans) { return CTL.lfp(u => bdd.or(p,  CTL.AX(u, trans))) }
   static AU(p, q, trans) { return CTL.lfp(u => bdd.or(p, bdd.and(q, CTL.AX(u, trans)))) }
 
-  static reachable(p, trans) { return CTL.lfp(u => bdd.or(p, CTL.EP(u, trans))) }
-
-  static source(trans)   { return CTL.AP(bdd.False, trans) } // find all states without transitions to them
-  static deadlock(trans) { return CTL.AX(bdd.False, trans) } // find all states without transitions from them
+  static reachable(p, trans) { return CTL.lfp(u => bdd.or(p, CTL.EP(u, trans))) } // find all states reachable from p
+  static source(trans)       { return CTL.AP(bdd.False, trans) } // find all states without transitions to them
+  static deadlock(trans)     { return CTL.AX(bdd.False, trans) } // find all states without transitions from them
 }
 CTL.reset()
 

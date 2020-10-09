@@ -23,6 +23,7 @@ const transition = bdd.orN([
 
 console.warn(window.ctl.source(transition).numberOfSatisfyingAssignments(window.ctl.state.length))
 console.warn(window.ctl.deadlock(transition).numberOfSatisfyingAssignments(window.ctl.state.length))
+console.warn(window.ctl.reachable(initial, transition).numberOfSatisfyingAssignments(window.ctl.state.length))
 //console.warn(transition)
 //console.warn("AG(b) = ")
 //console.warn(window.ctl.AG(b, transition))
