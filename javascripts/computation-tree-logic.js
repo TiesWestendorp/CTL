@@ -1,6 +1,4 @@
-"use strict"
-
-const bdd = require('./bdd.js')
+const bdd = require('./binary-decision-diagrams.js')
 
 class CTL {
   static reset() {

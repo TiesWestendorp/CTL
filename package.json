@@ -1,25 +1,22 @@
 {
   "name": "computation-tree-logic",
+  "description": "Computation tree logic library for JS",
   "version": "1.0.0",
-  "description": "Computation treel logic library for JS",
-  "main": "index.js",
   "type": "module",
-  "directories": {
-    "example": "examples",
-    "lib": "lib"
-  },
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "license": "MIT",
+
+  "author": "Ties Westendorp",
+
+  "homepage": "https://github.com/TiesWestendorp/CTL#readme",
+  "bugs": "https://github.com/TiesWestendorp/CTL/issues",
   "repository": {
-    "type": "git",
-    "url": "git+https://github.com/TiesWestendorp/BDD.git"
+    "url": "https://github.com/TiesWestendorp/CTL",
+    "type": "git"
   },
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/TiesWestendorp/BDD/issues"
-  },
-  "homepage": "https://github.com/TiesWestendorp/BDD#readme",
-  "dependencies": {}
+
+  "files": [
+    "javascripts/binary-decision-diagrams.js",
+    "javascripts/computation-tree-logic.js",
+    "javascripts/fair-computation-tree-logic.js"
+  ]
 }

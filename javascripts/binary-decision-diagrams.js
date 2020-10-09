@@ -1,5 +1,3 @@
-"use strict"
-
 class BDD {
   constructor(_label, _then, _else) {
     this._label = _label

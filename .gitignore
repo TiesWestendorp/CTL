@@ -1,5 +1,10 @@
-javascripts/bundle.js
-bundle.js
-index.html
-node_modules/
-package-lock.json
+*
+!examples
+!examples/*
+!javascripts
+!javascripts/*
+!test
+!test/*
+!LICENSE
+!package.json
+!README.md
