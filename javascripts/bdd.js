@@ -1,7 +1,5 @@
 "use strict"
 
-// All compositional statements ensure that the resulting BDD is an ROBDD (reduced and ordered).
-
 class BDD {
   constructor(_label, _then, _else) {
     this._label = _label
