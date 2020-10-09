@@ -1,8 +1,8 @@
 *
 !examples
 !examples/*
-!javascripts
-!javascripts/*
+!lib
+!lib/*
 !test
 !test/*
 !LICENSE
