@@ -1,8 +1,10 @@
 "use strict"
 
 // All compositional statements ensure that the resulting BDD is an ROBDD (reduced and ordered).
-// TODO: asynchronous calls of multiargument operations
 // Global pre- and post-condition: variable ordering is increasing
+
+// Note: Complexity improvement possible for existsN and forallN, if using binary search. Though there should be no difference in practice.
+
 class BDD {
   constructor(_label, _then, _else) {
     this._label = _label
@@ -26,7 +28,6 @@ class BDD {
       return _then
     }
     let bdd
-    // TODO: OBTAIN A LOCK
     let cached = BDD.cache[_label]
     if (cached) {
       bdd = cached.find(bdd => bdd._then === _then && bdd._else === _else)
@@ -38,7 +39,6 @@ class BDD {
       bdd = new BDD(_label, _then, _else)
       BDD.cache[_label] = [bdd, BDD.noCacheNot(bdd)]
     }
-    // TODO: RELEASE LOCK
     return bdd
   }
 
@@ -48,41 +48,10 @@ class BDD {
     return new BDD(A._label, BDD.noCacheNot(A._then), BDD.noCacheNot(A._else))
   }
 
-  static not(A) {
-    if (A === BDD.True)  return BDD.False
-    if (A === BDD.False) return BDD.True
-    return BDD.get(A._label, BDD.not(A._then), BDD.not(A._else))
-  }
 
-  // Precondition: forall key in mapping: mapping[key] > key
-  static substitute(A, mapping) {
-    if (A === BDD.True)  return BDD.True
-    if (A === BDD.False) return BDD.False
-    return BDD.get(mapping[A._label], BDD.substitute(A._then, mapping), BDD.substitute(A._else, mapping))
-  }
-
-  static exists(A, label) {
-    if (A.isTerminal)  return A
-    if (A._label === label) {
-      return BDD.or(A._then, A._else)
-    } else if (A._label < label) {
-      return BDD.get(A._label, BDD.exists(A._then, label), BDD.exists(A._else, label))
-    } else {
-      return A
-    }
-  }
-
-  static forall(A, label) {
-    if (A.isTerminal)  return A
-    if (A._label === label) {
-      return BDD.and(A._then, A._else)
-    } else if (A._label < label) {
-      return BDD.get(A._label, BDD.forall(A._then, label), BDD.forall(A._else, label))
-    } else {
-      return A
-    }
-  }
-
+  /*
+   *
+   */
   static conditional(A, _then, _else) {
     if (A === BDD.True)       return _then
     if (A === BDD.False)      return _else
@@ -91,8 +60,8 @@ class BDD {
     if (A === _else)          return BDD.conditional(A, _then, BDD.False)
     if (A === BDD.not(_then)) return BDD.conditional(A, BDD.False, _else)
     if (A === BDD.not(_else)) return BDD.conditional(A, _then, BDD.True)
-    if (_then.isTerminal() && _else.isTerminal()) {
-      return (_then === BDD.True) ? A : BDD.not(A)
+    if (_then.isTerminal && _else.isTerminal) {
+      return _then.value ? A : BDD.not(A)
     }
 
     const rootLabel = Math.min(A._label, _then._label, _else._label)
@@ -105,6 +74,26 @@ class BDD {
       case 6: return BDD.get(rootLabel, BDD.conditional(A._then, _then._then, _else),       BDD.conditional(A._else, _then._then, _else))
       case 7: return BDD.get(rootLabel, BDD.conditional(A._then, _then._then, _else._then), BDD.conditional(A._else, _then._else, _else._else))
     }
+  }
+
+  /*
+   * Replace all labels according to mapping
+   * Precondition: forall label1, label2: label1 < label2 => mapping[label1] < mapping[label2] (where implicitly mapping[label] === label when not label in mapping)
+   */
+  static substitute(A, mapping) {
+    if (A === BDD.True)  return BDD.True
+    if (A === BDD.False) return BDD.False
+    return BDD.get(A._label in mapping ? mapping[A._label] : A._label, BDD.substitute(A._then, mapping), BDD.substitute(A._else, mapping))
+  }
+
+
+  /*
+   * Boolean operations
+   */
+  static not(A) {
+    if (A === BDD.True)  return BDD.False
+    if (A === BDD.False) return BDD.True
+    return BDD.get(A._label, BDD.not(A._then), BDD.not(A._else))
   }
 
   static and(A, B) {
@@ -158,6 +147,10 @@ class BDD {
     }
   }
 
+  static xor(A, B)  { return BDD.not(BDD.eql(A, B)) }
+  static nor(A, B)  { return BDD.not(BDD.or(A, B))  }
+  static nand(A, B) { return BDD.not(BDD.and(A, B)) }
+
   static andN(As) {
     if (As.length === 0) return BDD.True
     if (As.length === 1) return As[0]
@@ -174,6 +167,32 @@ class BDD {
     if (As[0] === BDD.False) return BDD.orN(As.slice(1))
 
     return BDD.or(As[0], BDD.orN(As.slice(1)))
+  }
+
+
+  /*
+   * Quantifiers
+   */
+  static exists(A, label) {
+    if (A.isTerminal)  return A
+    if (A._label === label) {
+      return BDD.or(A._then, A._else)
+    } else if (A._label < label) {
+      return BDD.get(A._label, BDD.exists(A._then, label), BDD.exists(A._else, label))
+    } else {
+      return A
+    }
+  }
+
+  static forall(A, label) {
+    if (A.isTerminal)  return A
+    if (A._label === label) {
+      return BDD.and(A._then, A._else)
+    } else if (A._label < label) {
+      return BDD.get(A._label, BDD.forall(A._then, label), BDD.forall(A._else, label))
+    } else {
+      return A
+    }
   }
 
   // Precondition: labels sorted
@@ -204,24 +223,6 @@ class BDD {
       labels = labels.slice(index)
       return BDD.get(A._label, BDD.forallN(A._then, labels), BDD.forallN(A._else, labels))
     }
-  }
-
-  static _existsN(A, labels) {
-    // TODO: optimize!
-    let result = A
-    for(let i = 0; i < labels.length; i++) {
-      result = BDD.exists(result, labels[i])
-    }
-    return result
-  }
-
-  static _forallN(A, labels) {
-    // TODO: optimize!
-    let result = A
-    for(let i = 0; i < labels.length; i++) {
-      result = BDD.forall(result, labels[i])
-    }
-    return result
   }
 }
 

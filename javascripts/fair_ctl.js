@@ -3,34 +3,24 @@
 const bdd = require('./bdd.js')
 const ctl = require('./ctl.js')
 
+// fairness - a list of BDDs indicating a set of fairness constraints that should occur infinitly often
 class FairCTL {
   static reset() {
     ctl.reset()
   }
 
-  static EG(p, r, fairness, trans) { return ctl.fp(r, u => bdd.and(p, CTL.EX(CTL.EU(p, bdd.and(u, fairness), trans), trans))) }
-  static EU(p1, p2, r, fairness, trans) {}
-  static EX(p, r, fairness, trans) {}
-  static EF(p, r, fairness, trans) {}
+  static EX(p, fairness, trans) {
+    if (fairness.size == 0) return ctl.EX(p, trans)
+    return bdd.andN(fairness.map(cond => ctl.EX(ctl.EU(p, bdd.and(p, cond), trans), trans)))
+  }
+  static EG(p, fairness, trans) { return ctl.gfp(u => bdd.and(p, FairCTL.EX(u, trans))) }
+  static EF(p, fairness, trans) { return ctl.lfp(u => bdd.or(p,  FairCTL.EX(u, trans))) }
+  static EU(p, q, trans) { return ctl.lfp(u => bdd.or(p, bdd.and(q, FairCTL.EX(u, trans)))) }
+  static AX(p,    trans) { return bdd.not(FairCTL.EX(bdd.not(p), trans)) }
+  static AG(p,    trans) { return ctl.gfp(u => bdd.and(p, FairCTL.AX(u, trans))) }
+  static AF(p,    trans) { return ctl.lfp(u => bdd.or(p,  FairCTL.AX(u, trans))) }
+  static AU(p, q, trans) { return ctl.lfp(u => bdd.or(p, bdd.and(q, FairCTL.AX(u, trans)))) }
 }
 FairCTL.reset()
 
 module.exports = FairCTL
-
-// static BDD BddFairEU(BDD b1, BDD b2, BDD r, BDD F, andl_context_t* andl_context) {
-//     LACE_ME;
-//     BDD fair = BddFairEG(sylvan_true, r, F, andl_context);
-//     return BddEU(b1, sylvan_and(b2, fair), andl_context);
-// }
-//
-// static BDD BddFairEX(BDD b, BDD r, BDD F, andl_context_t* andl_context) {
-// 	LACE_ME;
-//     BDD fair = BddFairEG(sylvan_true, r, F, andl_context);
-//     return BddEX(sylvan_and(b, fair), andl_context);
-// }
-//
-// static BDD BddFairEF(BDD b, BDD r, BDD F, andl_context_t* andl_context) {
-// 	LACE_ME;
-//     BDD fair = BddFairEG(sylvan_true, r, F, andl_context);
-//     return BddEF(sylvan_and(b, fair), andl_context);
-// }

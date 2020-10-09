@@ -2,7 +2,10 @@
 "use strict"
 
 // All compositional statements ensure that the resulting BDD is an ROBDD (reduced and ordered).
-// TODO: asynchronous calls of multiargument operations
+// Global pre- and post-condition: variable ordering is increasing
+
+// Note: Complexity improvement possible for existsN and forallN, if using binary search. Though there should be no difference in practice.
+
 class BDD {
   constructor(_label, _then, _else) {
     this._label = _label
@@ -26,7 +29,6 @@ class BDD {
       return _then
     }
     let bdd
-    // TODO: OBTAIN A LOCK
     let cached = BDD.cache[_label]
     if (cached) {
       bdd = cached.find(bdd => bdd._then === _then && bdd._else === _else)
@@ -38,7 +40,6 @@ class BDD {
       bdd = new BDD(_label, _then, _else)
       BDD.cache[_label] = [bdd, BDD.noCacheNot(bdd)]
     }
-    // TODO: RELEASE LOCK
     return bdd
   }
 
@@ -48,41 +49,10 @@ class BDD {
     return new BDD(A._label, BDD.noCacheNot(A._then), BDD.noCacheNot(A._else))
   }
 
-  static not(A) {
-    if (A === BDD.True)  return BDD.False
-    if (A === BDD.False) return BDD.True
-    return BDD.get(A._label, BDD.not(A._then), BDD.not(A._else))
-  }
 
-  // Substitute may violate ROBDD invariant if mapping is not increasing
-  static substitute(A, mapping) {
-    if (A === BDD.True)  return BDD.True
-    if (A === BDD.False) return BDD.False
-    return BDD.get(mapping[A._label], BDD.substitute(A._then, mapping), BDD.substitute(A._else, mapping))
-  }
-
-  static exists(A, label) {
-    if (A.isTerminal)  return A
-    if (A._label === label) {
-      return BDD.or(A._then, A._else)
-    } else if (A._label < label) {
-      return BDD.get(A._label, BDD.exists(A._then, label), BDD.exists(A._else, label))
-    } else {
-      return A
-    }
-  }
-
-  static forall(A, label) {
-    if (A.isTerminal)  return A
-    if (A._label === label) {
-      return BDD.and(A._then, A._else)
-    } else if (A._label < label) {
-      return BDD.get(A._label, BDD.forall(A._then, label), BDD.forall(A._else, label))
-    } else {
-      return A
-    }
-  }
-
+  /*
+   *
+   */
   static conditional(A, _then, _else) {
     if (A === BDD.True)       return _then
     if (A === BDD.False)      return _else
@@ -91,8 +61,8 @@ class BDD {
     if (A === _else)          return BDD.conditional(A, _then, BDD.False)
     if (A === BDD.not(_then)) return BDD.conditional(A, BDD.False, _else)
     if (A === BDD.not(_else)) return BDD.conditional(A, _then, BDD.True)
-    if (_then.isTerminal() && _else.isTerminal()) {
-      return (_then === BDD.True) ? A : BDD.not(A)
+    if (_then.isTerminal && _else.isTerminal) {
+      return _then.value ? A : BDD.not(A)
     }
 
     const rootLabel = Math.min(A._label, _then._label, _else._label)
@@ -105,6 +75,26 @@ class BDD {
       case 6: return BDD.get(rootLabel, BDD.conditional(A._then, _then._then, _else),       BDD.conditional(A._else, _then._then, _else))
       case 7: return BDD.get(rootLabel, BDD.conditional(A._then, _then._then, _else._then), BDD.conditional(A._else, _then._else, _else._else))
     }
+  }
+
+  /*
+   * Replace all labels according to mapping
+   * Precondition: forall label1, label2: label1 < label2 => mapping[label1] < mapping[label2] (where implicitly mapping[label] === label when not label in mapping)
+   */
+  static substitute(A, mapping) {
+    if (A === BDD.True)  return BDD.True
+    if (A === BDD.False) return BDD.False
+    return BDD.get(A._label in mapping ? mapping[A._label] : A._label, BDD.substitute(A._then, mapping), BDD.substitute(A._else, mapping))
+  }
+
+
+  /*
+   * Boolean operations
+   */
+  static not(A) {
+    if (A === BDD.True)  return BDD.False
+    if (A === BDD.False) return BDD.True
+    return BDD.get(A._label, BDD.not(A._then), BDD.not(A._else))
   }
 
   static and(A, B) {
@@ -158,6 +148,10 @@ class BDD {
     }
   }
 
+  static xor(A, B)  { return BDD.not(BDD.eql(A, B)) }
+  static nor(A, B)  { return BDD.not(BDD.or(A, B))  }
+  static nand(A, B) { return BDD.not(BDD.and(A, B)) }
+
   static andN(As) {
     if (As.length === 0) return BDD.True
     if (As.length === 1) return As[0]
@@ -176,22 +170,60 @@ class BDD {
     return BDD.or(As[0], BDD.orN(As.slice(1)))
   }
 
-  static existsN(A, labels) {
-    // TODO: optimize!
-    let result = A
-    for(let i = 0; i < labels.length; i++) {
-      result = BDD.exists(result, labels[i])
+
+  /*
+   * Quantifiers
+   */
+  static exists(A, label) {
+    if (A.isTerminal)  return A
+    if (A._label === label) {
+      return BDD.or(A._then, A._else)
+    } else if (A._label < label) {
+      return BDD.get(A._label, BDD.exists(A._then, label), BDD.exists(A._else, label))
+    } else {
+      return A
     }
-    return result
   }
 
-  static forallN(A, labels) {
-    // TODO: optimize!
-    let result = A
-    for(let i = 0; i < labels.length; i++) {
-      result = BDD.forall(result, labels[i])
+  static forall(A, label) {
+    if (A.isTerminal)  return A
+    if (A._label === label) {
+      return BDD.and(A._then, A._else)
+    } else if (A._label < label) {
+      return BDD.get(A._label, BDD.forall(A._then, label), BDD.forall(A._else, label))
+    } else {
+      return A
     }
-    return result
+  }
+
+  // Precondition: labels sorted
+  static existsN(A, labels) {
+    if (A.isTerminal) return A
+    const index = labels.findIndex(label => label >= A._label)
+    if (index === -1) return A
+
+    if (A._label === labels[index]) {
+      labels = labels.slice(index + 1)
+      return BDD.or(BDD.existsN(A._then, labels), BDD.existsN(A._else, labels))
+    } else {
+      labels = labels.slice(index)
+      return BDD.get(A._label, BDD.existsN(A._then, labels), BDD.existsN(A._else, labels))
+    }
+  }
+
+  // Precondition: labels sorted
+  static forallN(A, labels) {
+    if (A.isTerminal) return A
+    const index = labels.findIndex(label => label >= A._label)
+    if (index === -1) return A
+
+    if (A._label === labels[index]) {
+      labels = labels.slice(index + 1)
+      return BDD.and(BDD.forallN(A._then, labels), BDD.forallN(A._else, labels))
+    } else {
+      labels = labels.slice(index)
+      return BDD.get(A._label, BDD.forallN(A._then, labels), BDD.forallN(A._else, labels))
+    }
   }
 }
 
@@ -206,49 +238,51 @@ module.exports = BDD
 
 const bdd = require('./bdd.js')
 
-// TODO:
 //  - Witness and counterexample generation (Tree-like counterexample in model checking by Clarke et al)
-//  - Optimize n-ary exists (should require only one pass)
-//  - Substitute can mess-up variable ordering!
-//  - Implement other boolean operators (xor, nor, nand, nxor, etc)
 //  - FORCE variable ordering
-//  - Parallelized computation
 class CTL {
   static reset() {
     bdd.reset()
     CTL.state          = []
     CTL.nextState      = []
     CTL.mapStateToNext = {}
+    CTL.mapNextToState = {}
+    CTL.variables      = []
   }
 
   static fp(initial, operation) {
-    let current = initial
-    let previous
-    while (current != previous) {
-      previous = current
-      current = operation(current)
-    }
+    let [previous, current] = [undefined, initial]
+    while (current != previous) [previous, current] = [current, operation(current)]
     return current
   }
-  static lfp(operation) { return CTL.fp(bdd.False, operation) }
-  static gfp(operation) { return CTL.fp(bdd.True,  operation) }
+  static lfp(operation) { return CTL.fp(bdd.False, operation) } // least fixed-point
+  static gfp(operation) { return CTL.fp(bdd.True,  operation) } // greatest fixed-point
 
   static variable() {
     let [current, next] = [bdd.variable(), bdd.variable()]
     CTL.state.push(current._label)
     CTL.nextState.push(next._label)
     CTL.mapStateToNext[current._label] = next._label
+    CTL.mapNextToState[next._label] = current._label
+    CTL.variables.push(current)
+    CTL.variables.push(next)
     return [current, next]
   }
 
-  static AX(p,    trans) { return bdd.forallN(bdd.and(trans, bdd.substitute(p, CTL.mapStateToNext)), CTL.nextState) }
-  static AG(p,    trans) { return CTL.gfp(u => bdd.and(p, CTL.AX(u, trans))) }
-  static AF(p,    trans) { return CTL.lfp(u => bdd.or(p,  CTL.AX(u, trans))) }
-  static AU(p, q, trans) { return CTL.lfp(u => bdd.or(p, bdd.and(q, CTL.AX(u, trans)))) }
   static EX(p,    trans) { return bdd.existsN(bdd.and(trans, bdd.substitute(p, CTL.mapStateToNext)), CTL.nextState) }
+  static EP(p,    trans) { return bdd.substitute(bdd.existsN(bdd.and(trans, p), CTL.state), CTL.mapNextToState) }
   static EG(p,    trans) { return CTL.gfp(u => bdd.and(p, CTL.EX(u, trans))) }
   static EF(p,    trans) { return CTL.lfp(u => bdd.or(p,  CTL.EX(u, trans))) }
   static EU(p, q, trans) { return CTL.lfp(u => bdd.or(p, bdd.and(q, CTL.EX(u, trans)))) }
+  static AX(p,    trans) { return bdd.not(CTL.EX(bdd.not(p), trans)) }
+  static AP(p,    trans) { return bdd.not(CTL.EP(bdd.not(p), trans)) }
+  static AG(p,    trans) { return CTL.gfp(u => bdd.and(p, CTL.AX(u, trans))) }
+  static AF(p,    trans) { return CTL.lfp(u => bdd.or(p,  CTL.AX(u, trans))) }
+  static AU(p, q, trans) { return CTL.lfp(u => bdd.or(p, bdd.and(q, CTL.AX(u, trans)))) }
+
+  static reachable(p, trans) { return CTL.lfp(u => bdd.or(p, CTL.EP(u, trans))) }
+  static source(trans)       { return CTL.AP(bdd.False, trans) }
+  static deadlock(trans)     { return CTL.AX(bdd.False, trans) }
 }
 CTL.reset()
 
@@ -260,41 +294,31 @@ module.exports = CTL
 const bdd = require('./bdd.js')
 const ctl = require('./ctl.js')
 
+// fairness - a list of BDDs indicating a set of fairness constraints that should occur infinitly often
 class FairCTL {
   static reset() {
     ctl.reset()
   }
 
-  static EG(p, r, fairness, trans) { return ctl.fp(r, u => bdd.and(p, CTL.EX(CTL.EU(p, bdd.and(u, fairness), trans), trans))) }
-  static EU(p1, p2, r, fairness, trans) {}
-  static EX(p, r, fairness, trans) {}
-  static EF(p, r, fairness, trans) {}
+  static EX(p, fairness, trans) {
+    if (fairness.size == 0) return ctl.EX(p, trans)
+    return bdd.andN(fairness.map(cond => ctl.EX(ctl.EU(p, bdd.and(p, cond), trans), trans)))
+  }
+  static EG(p, fairness, trans) { return ctl.gfp(u => bdd.and(p, FairCTL.EX(u, trans))) }
+  static EF(p, fairness, trans) { return ctl.lfp(u => bdd.or(p,  FairCTL.EX(u, trans))) }
+  static EU(p, q, trans) { return ctl.lfp(u => bdd.or(p, bdd.and(q, FairCTL.EX(u, trans)))) }
+  static AX(p,    trans) { return bdd.not(FairCTL.EX(bdd.not(p), trans)) }
+  static AG(p,    trans) { return ctl.gfp(u => bdd.and(p, FairCTL.AX(u, trans))) }
+  static AF(p,    trans) { return ctl.lfp(u => bdd.or(p,  FairCTL.AX(u, trans))) }
+  static AU(p, q, trans) { return ctl.lfp(u => bdd.or(p, bdd.and(q, FairCTL.AX(u, trans)))) }
 }
 FairCTL.reset()
 
 module.exports = FairCTL
 
-// static BDD BddFairEU(BDD b1, BDD b2, BDD r, BDD F, andl_context_t* andl_context) {
-//     LACE_ME;
-//     BDD fair = BddFairEG(sylvan_true, r, F, andl_context);
-//     return BddEU(b1, sylvan_and(b2, fair), andl_context);
-// }
-//
-// static BDD BddFairEX(BDD b, BDD r, BDD F, andl_context_t* andl_context) {
-// 	LACE_ME;
-//     BDD fair = BddFairEG(sylvan_true, r, F, andl_context);
-//     return BddEX(sylvan_and(b, fair), andl_context);
-// }
-//
-// static BDD BddFairEF(BDD b, BDD r, BDD F, andl_context_t* andl_context) {
-// 	LACE_ME;
-//     BDD fair = BddFairEG(sylvan_true, r, F, andl_context);
-//     return BddEF(sylvan_and(b, fair), andl_context);
-// }
-
 },{"./bdd.js":1,"./ctl.js":2}],4:[function(require,module,exports){
 const bdd = require('./bdd')
-window.bdd = require('./bdd')
+window.bdd = bdd
 window.ctl = require('./ctl')
 window.fair_ctl = require('./fair_ctl')
 window.test = 1
@@ -303,20 +327,26 @@ const [a, _a] = window.ctl.variable()
 const [b, _b] = window.ctl.variable()
 
 const initial    = bdd.and(a,b)
-const transition = bdd.and(bdd.not(bdd.eql(a, _a)), bdd.eql(b, _b))
+const transition = bdd.orN([
+  bdd.andN([a, _a,          b,          bdd.not(_b)]),
+  bdd.andN([a, bdd.not(_a), b,          _b]),
+  bdd.andN([bdd.not(a), _a, bdd.not(b), bdd.not(_b)]),
+])
 
-console.warn("EF(b) =")
-console.warn(bdd.and(initial, window.ctl.EF(b, transition)))
-console.warn(bdd.and(initial, window.ctl.EF(b, transition)).isSatisfiable)
+//console.warn("EF(b) =")
+//console.warn(bdd.and(initial, window.ctl.EF(b, transition)))
 
-console.warn("EG(b) =")
-console.warn(bdd.and(initial, window.ctl.EG(b, transition)))
-console.warn(bdd.and(initial, window.ctl.EG(b, transition)).isSatisfiable)
+//console.warn("EG(b) =")
+//console.warn(bdd.and(initial, window.ctl.EG(b, transition)))
 
-console.warn("AG(b) = ")
-console.warn(bdd.and(initial, window.ctl.AG(b, transition)))
-console.warn(bdd.and(initial, window.ctl.AG(b, transition)).isSatisfiable)
+console.warn(window.ctl.source(transition))
+//console.warn(transition)
+//console.warn("AG(b) = ")
+//console.warn(window.ctl.AG(b, transition))
 
-console.warn(bdd.existsN(initial, [a._label, b._label]))
+//console.warn("EF(NOT (a OR b)) = ")
+//console.warn(window.ctl.EF(bdd.not(bdd.or(a, b)), transition))
+
+//console.warn(bdd.existsN(initial, [a._label, b._label]))
 
 },{"./bdd":1,"./ctl":2,"./fair_ctl":3}]},{},[4]);
