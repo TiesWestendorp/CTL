@@ -1,8 +1,4 @@
-# CTL
-CTL library for JS
-
-#
-browserify main.js --outfile=bundle.js
+# computation-tree-logic: CTL for JS
 
 All compositional statements ensure that the resulting BDD is an ROBDD (reduced and ordered).
 

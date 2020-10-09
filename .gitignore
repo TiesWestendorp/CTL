@@ -1,10 +1,16 @@
 *
 !examples
 !examples/*
+!examples/binary-decision-diagrams/*
+!examples/computation-tree-logic/*
+!examples/fair-computation-tree-logic/*
 !lib
 !lib/*
 !test
 !test/*
+!test/binary-decision-diagrams/*
+!test/computation-tree-logic/*
+!test/fair-computation-tree-logic/*
 !LICENSE
 !package.json
 !README.md
