@@ -30,10 +30,13 @@ The binary decision diagram is internally guaranteed to be *reduced* and *ordere
 
 
 ## Installation
+```
+yarn install computation-tree-logic
+```
 
 ## Example
 
-`
+```javascript
 const bdd = require('binary-decision-diagrams')
 const ctl = require('computation-tree-logic')
 
@@ -50,9 +53,7 @@ const transition = bdd.orN([
 
 // Prints the reachable states from the initial state
 console.warn(ctl.reachable(initial, transition))
-
-//
-`
+```
 
 ## Future plans
  - Parse CTL property from string
