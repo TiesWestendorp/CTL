@@ -1,3 +1,5 @@
+// Wolf, goat and cabbage problem: https://en.wikipedia.org/wiki/Wolf,_goat_and_cabbage_problem
+
 const bdd = require('../../lib/binary-decision-diagrams')
 const ctl = require('../../lib/computation-tree-logic')
 

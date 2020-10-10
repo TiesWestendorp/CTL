@@ -1,3 +1,5 @@
+// Dining philosophers problem: https://en.wikipedia.org/wiki/Dining_philosophers_problem
+
 const bdd = require('../../lib/binary-decision-diagrams')
 const ctl = require('../../lib/computation-tree-logic')
 const fair_ctl = require('../../lib/fair-computation-tree-logic')
