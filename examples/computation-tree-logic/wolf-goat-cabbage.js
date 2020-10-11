@@ -27,7 +27,9 @@ const alive = bdd.or(
   bdd.and(bdd.xor(wolf[0], goat[0]), bdd.xor(goat[0], cabbage[0]))
 )
 const done  = bdd.andN([wolf[0], goat[0], cabbage[0], self[0]])
-const stay_alive_until_done = ctl.EU(alive, done, transition)
-const solvable = bdd.imp(initial, stay_alive_until_done).isTautology
 
-console.warn("There is a way to solve the puzzle: ", solvable)
+const losable  = bdd.imp(initial, ctl.EF(bdd.not(alive), transition)).isTautology
+const solvable = bdd.imp(initial, ctl.EU(alive, done, transition)).isTautology
+
+console.warn("There is a way to lose:", losable)
+console.warn("There is a way to solve the puzzle:", solvable)
