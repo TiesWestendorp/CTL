@@ -22,10 +22,12 @@ const initial = bdd.andN([
   bdd.not(self[0])
 ])
 
-const alive = bdd.orN([
+const alive = bdd.or(
   bdd.eql(goat[0], self[0]),
   bdd.and(bdd.xor(wolf[0], goat[0]), bdd.xor(goat[0], cabbage[0]))
-])
+)
 const done  = bdd.andN([wolf[0], goat[0], cabbage[0], self[0]])
+const stay_alive_until_done = ctl.EU(alive, done, transition)
+const solvable = bdd.imp(initial, stay_alive_until_done).isTautology
 
-console.warn("There is a way to solve the puzzle: ", bdd.and(initial, ctl.EU(alive, done, transition)).isSatisfiable)
+console.warn("There is a way to solve the puzzle: ", solvable)
