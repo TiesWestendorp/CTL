@@ -13,43 +13,43 @@ for(let i = 0; i < 4; i++) positions.push(ctl.variable())
 for(let i = 0; i < 7; i++) bridges.push(ctl.variable())
 
 let transition = bdd.orN([
-  bdd.andN([ // crossing bridge 0
+  bdd.andN([ // crossing bridge 0 brings you from 0 to 1 or vice versa
     bdd.xor(...positions[0]), bdd.xor(...positions[1]), bdd.eql(...positions[2]), bdd.eql(...positions[3]),
     bdd.or(positions[0][0], positions[1][0]),
     bdd.not(bridges[0][0]), bridges[0][1],
     bdd.andN(exceptIndex(bridges, 0).map(bridge => bdd.eql(...bridge)))
   ]),
-  bdd.andN([ // crossing bridge 1
+  bdd.andN([ // crossing bridge 1 brings you from 0 to 1 or vice versa
     bdd.xor(...positions[0]), bdd.xor(...positions[1]), bdd.eql(...positions[2]), bdd.eql(...positions[3]),
     bdd.or(positions[0][0], positions[1][0]),
     bdd.not(bridges[1][0]), bridges[1][1],
     bdd.andN(exceptIndex(bridges, 1).map(bridge => bdd.eql(...bridge)))
   ]),
-  bdd.andN([ // crossing bridge 2
+  bdd.andN([ // crossing bridge 2 brings you from 1 to 2 or vice versa
     bdd.eql(...positions[0]), bdd.xor(...positions[1]), bdd.xor(...positions[2]), bdd.eql(...positions[3]),
     bdd.or(positions[1][0], positions[2][0]),
     bdd.not(bridges[2][0]), bridges[2][1],
     bdd.andN(exceptIndex(bridges, 2).map(bridge => bdd.eql(...bridge)))
   ]),
-  bdd.andN([ // crossing bridge 3
+  bdd.andN([ // crossing bridge 3 brings you from 1 to 2 or vice versa
     bdd.eql(...positions[0]), bdd.xor(...positions[1]), bdd.xor(...positions[2]), bdd.eql(...positions[3]),
     bdd.or(positions[1][0], positions[2][0]),
     bdd.not(bridges[3][0]), bridges[3][1],
     bdd.andN(exceptIndex(bridges, 3).map(bridge => bdd.eql(...bridge)))
   ]),
-  bdd.andN([ // crossing bridge 4
+  bdd.andN([ // crossing bridge 4 brings you from 0 to 3 or vice versa
     bdd.xor(...positions[0]), bdd.eql(...positions[1]), bdd.eql(...positions[2]), bdd.xor(...positions[3]),
     bdd.or(positions[0][0], positions[3][0]),
     bdd.not(bridges[4][0]), bridges[4][1],
     bdd.andN(exceptIndex(bridges, 4).map(bridge => bdd.eql(...bridge)))
   ]),
-  bdd.andN([ // crossing bridge 5
+  bdd.andN([ // crossing bridge 5 brings you from 1 to 3 or vice versa
     bdd.eql(...positions[0]), bdd.xor(...positions[1]), bdd.eql(...positions[2]), bdd.xor(...positions[3]),
     bdd.or(positions[1][0], positions[3][0]),
     bdd.not(bridges[5][0]), bridges[5][1],
     bdd.andN(exceptIndex(bridges, 5).map(bridge => bdd.eql(...bridge)))
   ]),
-  bdd.andN([ // crossing bridge 6
+  bdd.andN([ // crossing bridge 6 brings you from 2 to 3 or vice versa
     bdd.eql(...positions[0]), bdd.eql(...positions[1]), bdd.xor(...positions[2]), bdd.xor(...positions[3]),
     bdd.or(positions[2][0], positions[3][0]),
     bdd.not(bridges[6][0]), bridges[6][1],
@@ -67,7 +67,6 @@ const single_position = bdd.and(
 )
 const one_position_at_a_time = bdd.imp(single_position, ctl.AG(single_position, transition)).isTautology
 console.warn("Sanity check: only at one position at a time? ", one_position_at_a_time)
-
 
 const starting_position = positions[0][0]
 const every_bridge_used = bdd.andN(bridges.map(bridge => bridge[0]))
