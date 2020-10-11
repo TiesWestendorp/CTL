@@ -77,7 +77,7 @@ let initial = bdd.andN([
   bdd.andN(exceptIndex(positions, 0).map(position => bdd.not(position[0]))),
   bdd.andN(bridges.map(bridge => bdd.not(bridge[0])))
 ])
-console.warn("Can we solve the puzzle? ", bdd.and(initial, ctl.EF(bdd.and(starting_position, every_bridge_used), transition)).isSatisfiable)
+console.warn("Can we solve the puzzle? ", bdd.imp(initial, ctl.EF(bdd.and(starting_position, every_bridge_used), transition)).isTautology)
 
 // Start at position 0, with bridges 0 and 6 used
 initial = bdd.andN([
@@ -86,4 +86,4 @@ initial = bdd.andN([
   bdd.andN(exceptIndex(positions, 0).map(position => bdd.not(position[0]))),
   bdd.andN(bridges.slice(1,6).map(bridge => bdd.not(bridge[0])))
 ])
-console.warn("Can we solve the puzzle, if we remove bridges 0 and 6? ", bdd.and(initial, ctl.EF(bdd.and(starting_position, every_bridge_used), transition)).isSatisfiable)
+console.warn("Can we solve the puzzle, if we remove bridges 0 and 6? ", bdd.imp(initial, ctl.EF(bdd.and(starting_position, every_bridge_used), transition)).isTautology)

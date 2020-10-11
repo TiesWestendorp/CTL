@@ -50,7 +50,7 @@ for(let i = 0; i < n; i++) {
     bdd.andN(indices_except_i.map(j => bdd.eql(...right_utensils[j]))),
     bdd.andN(indices_except_i.map(j => bdd.eql(...eating[j]))),
     bdd.and(...left_utensils[i]),
-    bdd.and(...right_utensils[i])
+    bdd.and(...right_utensils[i]),
     bdd.not(eating[i][0]), eating[i][1]
   ]))
 
@@ -78,4 +78,4 @@ const reachable_deadlocks = bdd.and(reachable, deadlocks)
 
 console.warn("Number of reachable states:",    reachable.numberOfSatisfyingAssignments(3*n))
 console.warn("Number of reachable deadlocks:", reachable_deadlocks.numberOfSatisfyingAssignments(3*n))
-console.warn("Does there exist a loop that avoids deadlocks?", bdd.and(initial, ctl.EG(bdd.not(deadlocks), transition)).isSatisfiable)
+console.warn("Does there exist a loop that avoids deadlocks?", bdd.imp(initial, ctl.EG(bdd.not(deadlocks), transition)).isTautology)
