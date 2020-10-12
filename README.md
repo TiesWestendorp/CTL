@@ -1,5 +1,7 @@
 # computation-tree-logic: CTL for JS
 
+# WIP
+
 This library offers a way to *verify CTL properties for given transition functions*. The transition function and states are represented by *binary decision diagrams*. *Fairness conditions* can be imposed.
 
 The satisfying states of the CTL property are computed via fixed-point computations.
