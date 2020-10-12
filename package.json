@@ -1,18 +1,17 @@
 {
   "name": "computation-tree-logic",
   "description": "Computation tree logic library for JS",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "type": "module",
   "license": "MIT",
-
   "author": "Ties Westendorp",
-
   "homepage": "https://github.com/TiesWestendorp/CTL#readme",
-  "bugs":     "https://github.com/TiesWestendorp/CTL/issues",
+  "bugs": "https://github.com/TiesWestendorp/CTL/issues",
   "repository": {
     "url": "https://github.com/TiesWestendorp/CTL",
     "type": "git"
   },
-
-  "files": ["lib/*"]
+  "files": [
+    "lib/*"
+  ]
 }
