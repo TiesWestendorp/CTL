@@ -8,15 +8,11 @@
   "author": "Ties Westendorp",
 
   "homepage": "https://github.com/TiesWestendorp/CTL#readme",
-  "bugs": "https://github.com/TiesWestendorp/CTL/issues",
+  "bugs":     "https://github.com/TiesWestendorp/CTL/issues",
   "repository": {
     "url": "https://github.com/TiesWestendorp/CTL",
     "type": "git"
   },
 
-  "files": [
-    "javascripts/binary-decision-diagrams.js",
-    "javascripts/computation-tree-logic.js",
-    "javascripts/fair-computation-tree-logic.js"
-  ]
+  "files": ["lib/*"]
 }
