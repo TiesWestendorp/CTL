@@ -58,6 +58,7 @@ console.warn(ctl.reachable(initial, transition))
 ```
 
 ## Future plans
+ - Split ROBDD into separate library
  - Parse CTL property from string
  - Witness and counterexample generation (Tree-like counterexample in model checking by Clarke et al)?
  - Partial transitions?
