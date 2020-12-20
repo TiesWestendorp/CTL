@@ -41,6 +41,7 @@ npm i computation-tree-logic
 See https://github.com/TiesWestendorp/CTL/tree/master/examples
 
 ## Future plans
+ - Split ROBDD into separate library
  - Parse CTL property from string
  - Witness and counterexample generation (Tree-like counterexample in model checking by Clarke et al)?
  - Partial transitions?
